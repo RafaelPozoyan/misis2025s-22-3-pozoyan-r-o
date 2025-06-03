@@ -10,10 +10,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    // generate new grayscale img
     cv::Mat base = create_greyscale_img();
 
-    // send this img with different gammas
     std::vector<double> gammas = { 1.0, 1.8, 2.0, 2.2, 2.4, 2.6 };
     std::vector<cv::Mat> collageImgs;
 
@@ -22,11 +20,8 @@ int main(int argc, char* argv[]) {
         collageImgs.push_back(gammaImg);
     }
 
-    // create albom
     cv::Mat collage;
     cv::vconcat(collageImgs, collage);
-
-    // export
 
     std::string output_path = argv[1];
     if (!cv::imwrite(output_path, collage)) {
