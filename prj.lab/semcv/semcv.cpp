@@ -11,8 +11,6 @@
 #include <cmath>
 
 std::string strid_from_mat(const cv::Mat& img, const int n) {
-    //   проверку на нормальные входные
-
     int width = img.cols;
     int height = img.rows;
     int channels = img.channels();
@@ -80,7 +78,6 @@ cv::Mat create_greyscale_img() {
     const int channels = 1;
     const int numStripes = 256;
 
-    //cv::Mat img(height, width, CV_MAKETYPE(CV_8U, 1), cv::Scalar(0));
     cv::Mat stripeRow(1, numStripes, CV_8UC1);
     for (int i = 0; i < numStripes; ++i) {
         stripeRow.at<uchar>(0, i) = static_cast<uchar>(i);
@@ -97,9 +94,6 @@ cv::Mat create_greyscale_img() {
 }
 
 cv::Mat gamma_correction(const cv::Mat& src, double gamma) {
-    // why dont work?
-    //cv::CV_Assert(gamma >= 0);
-
     cv::Mat lut(1, 256, CV_8UC1);
     for (int i = 0; i < 256; ++i) {
         lut.at<uchar>(i) = cv::saturate_cast<uchar>(std::pow(i / 255.0, gamma) * 255.0);
@@ -107,7 +101,6 @@ cv::Mat gamma_correction(const cv::Mat& src, double gamma) {
 
     cv::Mat dst;
     cv::LUT(src, lut, dst);
-    //std::cout << "dst.empty() = " << dst.empty() << ", size = " << dst.size() << ", type = " << dst.type() << std::endl;
 
     return dst;
 
@@ -243,4 +236,58 @@ cv::Mat autocontrast(const cv::Mat& img, const double q_black, const double q_wh
     }
 }
 
+cv::Mat autocontrast_rgb(const cv::Mat& img, double q_black, double q_white) {
+    CV_Assert(!img.empty() && img.type() == CV_8UC3);
+
+    std::vector<cv::Mat> channels;
+    cv::split(img, channels);
+
+    // Находим общие квантили для всех каналов
+    int global_vmin = 255;
+    int global_vmax = 0;
+
+    for (const auto& ch : channels) {
+        cv::Mat hist;
+        const int histSize[] = { 256 };
+        const float range[] = { 0, 256 };
+        const float* ranges[] = { range };
+
+        cv::calcHist(&ch, 1, 0, cv::Mat(), hist, 1, histSize, ranges);
+
+        const int total = ch.rows * ch.cols;
+        double sum = 0;
+        int vmin = 0, vmax = 255;
+
+        // Поиск vmin
+        for (int i = 0; i < 256; ++i) {
+            sum += hist.at<float>(i);
+            if (sum >= q_black * total) {
+                vmin = i;
+                break;
+            }
+        }
+
+        // Поиск vmax
+        sum = 0;
+        for (int i = 0; i < 256; ++i) {
+            sum += hist.at<float>(i);
+            if (sum >= q_white * total) {
+                vmax = i;
+                break;
+            }
+        }
+
+        global_vmin = std::min(global_vmin, vmin);
+        global_vmax = std::max(global_vmax, vmax);
+    }
+
+    if (global_vmin >= global_vmax) return img.clone();
+
+    // Применяем общие значения ко всем каналам
+    const double scale = 255.0 / (global_vmax - global_vmin);
+    cv::Mat result;
+    img.convertTo(result, CV_8UC3, scale, -global_vmin * scale);
+
+    return result;
+}
 

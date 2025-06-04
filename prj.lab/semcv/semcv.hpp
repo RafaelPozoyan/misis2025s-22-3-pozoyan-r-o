@@ -22,4 +22,5 @@ cv::Mat add_noise_gau(const cv::Mat& img, const int std);
 void create_test_images(const std::string& path);
 
 cv::Mat autocontrast(const cv::Mat& img, const double q_black, const double q_white);
+cv::Mat autocontrast_rgb(const cv::Mat& img, double q_black, double q_white);
 #endif

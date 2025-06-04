@@ -53,8 +53,6 @@ public:
 
         for (int row = 0; row < collage_height_cells_; ++row) {
             for (int col = 0; col < collage_width_cells; ++col) {
-                // getting roi
-
                 cv::Scalar mean, std;
                 cv::Mat roi = get_collage_part(row, col);
 
@@ -132,7 +130,7 @@ void save_statistics_table(std::string file_path) {
     std::string md_path = "../output/lab2_statistics.md";
 
     std::vector<std::tuple<int, int, int>> levels = { std::make_tuple(0,127,255),
-   std::make_tuple(20,127,235), std::make_tuple(55,127,200), std::make_tuple(90,127,165) };
+    std::make_tuple(20,127,235), std::make_tuple(55,127,200), std::make_tuple(90,127,165) };
     std::vector<int> stds = { 3,7,15 };
 
     DistributionParams exp;
@@ -165,7 +163,7 @@ int main(int argc, char* argv[]) {
         std::vector<cv::Mat> quads;
 
     std::vector<cv::Scalar> colors = { cv::Scalar(100,100,100), cv::Scalar(150,150,150) };
-    // sepatate parts of collage
+    // separate parts of collage
     for (int row = 0; row < 3; ++row) {
         std::vector<cv::Mat> hist_collage_parts;
         for (int col = 0; col < 4; ++col) {
@@ -180,7 +178,7 @@ int main(int argc, char* argv[]) {
     cv::Mat hist_collage;
     cv::vconcat(quads, hist_collage);
 
-    std::string output_path = "../resources/hist2.png";
+    std::string output_path = "../output/hist2.png";
     if (!cv::imwrite(output_path, hist_collage)) {
         std::cerr << "Error could not save collage to " << output_path << std::endl;
         return 1;
