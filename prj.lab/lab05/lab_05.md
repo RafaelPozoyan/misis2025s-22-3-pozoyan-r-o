@@ -5,7 +5,7 @@
 
 #### Test image:
 
-![img_1](../../test_image.png)
+![img_1](./test_image.png)
 
 
 ### 2.2 Results
