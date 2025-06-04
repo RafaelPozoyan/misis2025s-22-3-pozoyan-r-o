@@ -1,4 +1,4 @@
-# Отчет по лабораторной работе №4
+# lab 4
 
 SEGMENTATION
 * Precision: 0.999832
@@ -10,11 +10,10 @@ DETECTION
 * Recall   : 1
 * F1-score : 1
 
-Полученные результаты:
-#1
+Results:
 
-![Результат №1](../../output/out.png)
+![image 1](../../output/out.png)
 
-![Результат №2](../../output/out_gt.png)
+![image 2](../../output/out_gt.png)
 
-![Результат №3](../../output/out_mask.png)
+![image 3](../../output/out_mask.png)
