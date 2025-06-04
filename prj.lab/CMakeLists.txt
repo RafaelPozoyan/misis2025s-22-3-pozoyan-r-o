@@ -1,7 +1,6 @@
-#choose lab
+#выберите необходимую лабораторную работу
 add_subdirectory(semcv)
 #add_subdirectory(lab01)
 #add_subdirectory(lab02)
 #add_subdirectory(lab03)
 add_subdirectory(lab04)
-add_subdirectory(coursework)

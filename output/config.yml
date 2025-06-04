@@ -1,0 +1,16 @@
+%YAML:1.0
+---
+rows: 4
+cols: 4
+cell: 256
+margin: 32
+bg: 40
+noise_mean: 0
+noise_std: 8
+axes_min: 30
+axes_max: 80
+blur_min: 1
+blur_max: 4
+brightness_min: 180
+brightness_max: 255
+seed: 0
