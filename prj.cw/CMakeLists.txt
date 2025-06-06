@@ -10,5 +10,5 @@ add_executable(qr_detector
     src/code_scanner.cpp
 )
 
-target_include_directories(qr_detector PRIVATE include)
+target_include_directories(qr_detector PUBLIC include)
 target_link_libraries(qr_detector ${OpenCV_LIBS})
