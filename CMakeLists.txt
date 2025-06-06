@@ -1,14 +1,24 @@
-cmake_minimum_required(VERSION 3.10)
-project(qr_detector)
+﻿cmake_minimum_required(VERSION 3.20)
 
-set(CMAKE_CXX_STANDARD 17)
+project(misis2025s-3-pozoyan_r_o)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "cmake")
 
-find_package(OpenCV REQUIRED)
+set(CMAKE_CXX_STANDARD 20)
 
-add_executable(qr_detector
-    src/main.cpp
-    src/code_scanner.cpp
-)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_SOURCE_DIR}/bin.dbg)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_SOURCE_DIR}/bin.rel)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_CURRENT_SOURCE_DIR}/bin.relwithdbg)
 
-target_include_directories(qr_detector PRIVATE include)
-target_link_libraries(qr_detector ${OpenCV_LIBS})
+find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
+
+include_directories(prj.lab prj.cw)
+
+add_subdirectory(prj.cw)
+add_subdirectory(prj.lab)
+add_subdirectory(prj.test)
+
+
+
+
