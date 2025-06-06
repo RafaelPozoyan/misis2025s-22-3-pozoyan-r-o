@@ -23,9 +23,11 @@
 ```
 prj.cw/
 ├── include/
-│   └── code_scanner.h        
+│   ├── code_scanner.h
+│   └── image_processor.h     
 ├── src/
-│   ├── code_scanner.cpp      
+│   ├── code_scanner.cpp
+│   ├── image_processor.cpp 
 │   └── main.cpp      
 ├── test_data
 ├── CMakeLists.txt            
