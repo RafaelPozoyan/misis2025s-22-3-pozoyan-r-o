@@ -16,13 +16,10 @@ public:
 private:
     static bool chooseTriple(const std::vector<std::vector<cv::Point>>& pats,
         std::vector<cv::Point2f>& triple);
-
     static bool findQRBoundingBox(const cv::Mat& bin, const std::vector<cv::Point2f>& triple,
         std::vector<cv::Point2f>& quad);
-
     static cv::Mat cropSquare(const cv::Mat& src,
         const std::vector<cv::Point2f>& quad);
-
-    static cv::Mat modules21(const cv::Mat& qr);           // 21×21 матрица
-    static std::string dummyDecode(const cv::Mat& mod);    // пока выводим bitmap
+    static cv::Mat modules21(const cv::Mat& qr);
+    static std::string dummyDecode(const cv::Mat& mod);
 };

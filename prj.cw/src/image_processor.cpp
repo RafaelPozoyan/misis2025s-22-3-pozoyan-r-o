@@ -1,23 +1,18 @@
 ﻿#include "image_processor.h"
 #include <algorithm>
-#include <numeric>
 
 cv::Mat ImageProcessor::preprocess(const cv::Mat& gray)
 {
     cv::Mat claheImg;
-    cv::createCLAHE(3.0, { 8,8 })->apply(gray, claheImg);
-
+    cv::createCLAHE(3.0, cv::Size(8, 8))->apply(gray, claheImg);
     cv::Mat blur;
-    cv::GaussianBlur(claheImg, blur, { 5,5 }, 0);
-
+    cv::GaussianBlur(claheImg, blur, cv::Size(5, 5), 0);
     cv::Mat bin;
     cv::adaptiveThreshold(blur, bin, 255,
-        cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv::THRESH_BINARY_INV, 31, 7);
+        cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY_INV, 31, 7);
     return bin;
 }
 
-// проверяем отношение площадей ~ (7^2 : 5^2 : 3^2) ≈ 49 : 25 : 9
 bool ImageProcessor::checkNestedRatio(const std::vector<cv::Point>& out,
     const std::vector<cv::Point>& in)
 {
@@ -25,7 +20,7 @@ bool ImageProcessor::checkNestedRatio(const std::vector<cv::Point>& out,
     double aIn = std::fabs(cv::contourArea(in));
     if (aIn < 10 || aOut < 100) return false;
     double ratio = aOut / aIn;
-    return ratio > 2.0 && ratio < 8.0;  
+    return ratio > 2.0 && ratio < 8.0;
 }
 
 bool ImageProcessor::hasTimingPattern(const cv::Mat& bin,
@@ -33,30 +28,23 @@ bool ImageProcessor::hasTimingPattern(const cv::Mat& bin,
 {
     cv::Rect R = cv::boundingRect(outer);
     int cx = R.x + R.width / 2, cy = R.y + R.height / 2;
-    std::vector<int> horiz, vert;
-
-    auto sampleLine = [&](int fixed, int start, int end, bool horizontal)
-        {
-            std::vector<int> runs;
-            if (start >= end) return runs;
-
-            uint8_t last = bin.at<uint8_t>(horizontal ? fixed : start, horizontal ? start : fixed);
-            int cnt = 0;
-            for (int t = start; t <= end; ++t) {
-                if ((horizontal && fixed >= 0 && fixed < bin.rows && t >= 0 && t < bin.cols) ||
-                    (!horizontal && t >= 0 && t < bin.rows && fixed >= 0 && fixed < bin.cols)) {
-                    uint8_t v = bin.at<uint8_t>(horizontal ? fixed : t, horizontal ? t : fixed);
-                    if (v == last) ++cnt;
-                    else { runs.push_back(cnt); cnt = 1; last = v; }
-                }
-            }
-            runs.push_back(cnt);
-            return runs;
+    auto sampleLine = [&](int fixed, int start, int end, bool horizontal) {
+        std::vector<int> runs;
+        if (start > end) return runs;
+        uint8_t last = bin.at<uint8_t>(horizontal ? fixed : start,
+            horizontal ? start : fixed);
+        int cnt = 0;
+        for (int t = start; t <= end; ++t) {
+            uint8_t v = bin.at<uint8_t>(horizontal ? fixed : t,
+                horizontal ? t : fixed);
+            if (v == last) ++cnt;
+            else { runs.push_back(cnt); cnt = 1; last = v; }
+        }
+        runs.push_back(cnt);
+        return runs;
         };
-
-    horiz = sampleLine(cy, R.x, R.x + R.width - 1, true);
-    vert = sampleLine(cx, R.y, R.y + R.height - 1, false);
-
+    std::vector<int> horiz = sampleLine(cy, R.x, R.x + R.width - 1, true);
+    std::vector<int> vert = sampleLine(cx, R.y, R.y + R.height - 1, false);
     auto good = [&](const std::vector<int>& r) {
         if (r.size() < 5) return false;
         for (size_t i = 0; i + 4 < r.size(); ++i) {
@@ -75,44 +63,36 @@ bool ImageProcessor::hasTimingPattern(const cv::Mat& bin,
 int ImageProcessor::countTimingModules(const cv::Mat& bin, cv::Point2f start, cv::Point2f end)
 {
     float dist = cv::norm(end - start);
-    int steps = (int)dist;
+    int steps = int(dist);
     if (steps < 2) return 0;
-
     std::vector<uint8_t> values;
     for (int i = 0; i <= steps; ++i) {
-        float t = (float)i / steps;
+        float t = float(i) / steps;
         cv::Point2f pt = start + t * (end - start);
-        int x = cvRound(pt.x), y = cvRound(pt.y);
-        if (x >= 0 && y >= 0 && x < bin.cols && y < bin.rows) {
+        int x = int(pt.x), y = int(pt.y);
+        if (x >= 0 && y >= 0 && x < bin.cols && y < bin.rows)
             values.push_back(bin.at<uint8_t>(y, x));
-        }
     }
-
     int transitions = 0;
-    for (size_t i = 1; i < values.size(); ++i) {
+    for (size_t i = 1; i < values.size(); ++i)
         if (values[i] != values[i - 1]) transitions++;
-    }
-
     return transitions;
 }
 
-bool ImageProcessor::findTimingPatterns(const cv::Mat& bin, const cv::Point2f& topLeft,
-    const cv::Point2f& topRight, const cv::Point2f& bottomLeft,
+bool ImageProcessor::findTimingPatterns(const cv::Mat& bin,
+    const cv::Point2f& topLeft, const cv::Point2f& topRight, const cv::Point2f& bottomLeft,
     float& moduleSize)
 {
-    int hTransitions = countTimingModules(bin, topLeft + 0.3f * (topRight - topLeft),
+    int hT = countTimingModules(bin,
+        topLeft + 0.3f * (topRight - topLeft),
         topRight - 0.3f * (topRight - topLeft));
-    int vTransitions = countTimingModules(bin, topLeft + 0.3f * (bottomLeft - topLeft),
+    int vT = countTimingModules(bin,
+        topLeft + 0.3f * (bottomLeft - topLeft),
         bottomLeft - 0.3f * (bottomLeft - topLeft));
-
-    if (hTransitions >= 15 && hTransitions <= 25 && vTransitions >= 15 && vTransitions <= 25) {
-        float hDist = cv::norm(topRight - topLeft);
-        float vDist = cv::norm(bottomLeft - topLeft);
-        moduleSize = (hDist + vDist) / (2.0f * 21.0f); 
-        return true;
-    }
-
-    return false;
+    if (hT < 15 || hT>25 || vT < 15 || vT>25) return false;
+    float hDist = cv::norm(topRight - topLeft), vDist = cv::norm(bottomLeft - topLeft);
+    moduleSize = (hDist + vDist) / (2.0f * 21.0f);
+    return true;
 }
 
 std::vector<std::vector<cv::Point>>
@@ -122,24 +102,18 @@ ImageProcessor::findFinderPatterns(const cv::Mat& bin)
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours(bin, contours, hierarchy,
         cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
-
     std::vector<std::vector<cv::Point>> patterns;
     for (size_t i = 0; i < contours.size(); ++i) {
         int child = hierarchy[i][2];
-        if (child < 0) continue;                       
+        if (child < 0) continue;
         int grand = hierarchy[child][2];
-        if (grand < 0) continue;                       
-
-        std::vector<cv::Point> approxOut, approxIn;
-        cv::approxPolyDP(contours[i], approxOut, 0.05 * cv::arcLength(contours[i], true), true);
-        cv::approxPolyDP(contours[grand], approxIn, 0.05 * cv::arcLength(contours[grand], true), true);
-
-        if (approxOut.size() == 4 && approxIn.size() == 4 &&
-            checkNestedRatio(approxOut, approxIn) &&
-            hasTimingPattern(bin, approxOut))
-        {
-            patterns.push_back(approxOut);
-        }
+        if (grand < 0) continue;
+        std::vector<cv::Point> o, i2;
+        cv::approxPolyDP(contours[i], o, 0.05 * cv::arcLength(contours[i], true), true);
+        cv::approxPolyDP(contours[grand], i2, 0.05 * cv::arcLength(contours[grand], true), true);
+        if (o.size() == 4 && i2.size() == 4 &&
+            checkNestedRatio(o, i2) && hasTimingPattern(bin, o))
+            patterns.push_back(o);
     }
     return patterns;
 }
