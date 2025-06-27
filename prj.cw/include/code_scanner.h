@@ -1,25 +1,28 @@
 #pragma once
 #include <opencv2/opencv.hpp>
-#include <vector>
 #include <string>
+#include <vector>
+
+struct QRResult {
+    bool ok = false;
+    std::string text;
+    std::vector<cv::Point2f> quad;
+};
 
 class CodeScanner {
-private:
-    cv::QRCodeDetector detector;
-
 public:
-    CodeScanner();
+    QRResult detectAndDecode(const cv::Mat& bgr);
 
-    // Детекция + декодирование для фото и видео
-    bool detectAndDecode(const cv::Mat& image,
-        std::string& text,
-        std::vector<cv::Point2f>& points);
+private:
+    static bool chooseTriple(const std::vector<std::vector<cv::Point>>& pats,
+        std::vector<cv::Point2f>& triple);
 
-    // Только детекция для фото (опционально)
-    bool detectPhoto(const cv::Mat& image,
-        std::vector<cv::Point2f>& points);
+    static bool findQRBoundingBox(const cv::Mat& bin, const std::vector<cv::Point2f>& triple,
+        std::vector<cv::Point2f>& quad);
 
-    // Отрисовка рамки
-    void drawQRCode(cv::Mat& image,
-        const std::vector<cv::Point2f>& points);
+    static cv::Mat cropSquare(const cv::Mat& src,
+        const std::vector<cv::Point2f>& quad);
+
+    static cv::Mat modules21(const cv::Mat& qr);           // 21×21 матрица
+    static std::string dummyDecode(const cv::Mat& mod);    // пока выводим bitmap
 };

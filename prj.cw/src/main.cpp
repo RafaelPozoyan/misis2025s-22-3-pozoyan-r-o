@@ -1,117 +1,58 @@
-#include <opencv2/opencv.hpp>
-#include <iostream>
-#include <filesystem>
-#include <chrono>
 #include "code_scanner.h"
+#include <iostream>
 
-void processCamera() {
-    std::cout << "\n=== Camera Mode ===\nPress 'q' to exit.\n" << std::endl;
-
-    cv::VideoCapture cap(0);
-    if (!cap.isOpened()) {
-        std::cerr << "Error: cannot open camera\n";
-        return;
-    }
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-
-    CodeScanner scanner;
-    cv::Mat frame;
-
-    std::vector<cv::Point2f> last_corners;
-    std::string last_decoded;
-    auto last_detection_time = std::chrono::steady_clock::now();
-    const auto display_duration = std::chrono::seconds(2);
-
-    while (true) {
-        cap >> frame;
-        if (frame.empty()) break;
-
-        std::string decoded;
-        std::vector<cv::Point2f> corners;
-        bool found = scanner.detectAndDecode(frame, decoded, corners);
-
-        if (found) {
-            last_corners = corners;
-            last_decoded = decoded;
-            last_detection_time = std::chrono::steady_clock::now();
-            std::cout << "Detected URL: " << decoded << std::endl;
-        }
-
-        auto current_time = std::chrono::steady_clock::now();
-        bool should_display = (current_time - last_detection_time) < display_duration;
-
-        if (should_display && !last_corners.empty()) {
-            scanner.drawQRCode(frame, last_corners);
-            cv::putText(frame, last_decoded,
-                cv::Point((int)last_corners[0].x, (int)last_corners[0].y - 10),
-                cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 0), 2);
-        }
-
-        cv::imshow("Live Camera", frame);
-        if (cv::waitKey(1) == 'q') break;
-    }
-
-    cap.release();
-    cv::destroyAllWindows();
+static void drawQuad(cv::Mat& img, const std::vector<cv::Point2f>& q)
+{
+    if (q.size() != 4) return;
+    std::vector<std::vector<cv::Point>> poly(1);
+    for (auto& p : q) poly[0].push_back(cv::Point(cvRound(p.x), cvRound(p.y)));
+    cv::polylines(img, poly, true, { 0, 255, 0 }, 4);  // Увеличил толщину до 4
 }
 
-void processImage(const std::string& path) {
-    std::cout << "\n=== Photo Mode ===\nFile: " << path << "\n" << std::endl;
-
-    cv::Mat img = cv::imread(path);
-    if (img.empty()) {
-        std::cerr << "Error: cannot load image\n";
-        return;
-    }
-
+int main(int argc, char** argv)
+{
     CodeScanner scanner;
-    std::vector<cv::Point2f> corners;
-    std::string decoded_text;
-
-    if (scanner.detectAndDecode(img, decoded_text, corners)) {
-        scanner.drawQRCode(img, corners);
-
-        cv::Point text_position(
-            static_cast<int>(corners[0].x),
-            static_cast<int>(corners[0].y) + 200
-        );
-
-        cv::putText(img, decoded_text, text_position,
-            cv::FONT_HERSHEY_SIMPLEX, 0.9,
-            cv::Scalar(0, 0, 0), 2, cv::LINE_AA);
-
-        std::cout << "Detected URL: " << decoded_text << std::endl;
-        cv::imshow("QR-code Detector", img);
-    }
-    else {
-        std::cout << "QR-code not found" << std::endl;
-        cv::imshow("No QR-code Found", img);
-    }
-
-    cv::waitKey(0);
-    cv::destroyAllWindows();
-}
-
-int main(int argc, char* argv[]) {
-    std::cout << "QR Scanner"
-        << CV_VERSION << "\n" << std::endl;
-
     if (argc == 1) {
-        processCamera();
-    }
-    else if (argc == 2) {
-        std::string path = argv[1];
-        if (!std::filesystem::exists(path)) {
-            std::cerr << "Error: file not found: " << path << std::endl;
-            return -1;
+        cv::VideoCapture cap(0);
+        if (!cap.isOpened()) {
+            std::cerr << "No camera\n";
+            return 1;
         }
-        processImage(path);
+
+        while (true) {
+            cv::Mat f;
+            cap >> f;
+            if (f.empty()) break;
+
+            auto r = scanner.detectAndDecode(f);
+            if (r.ok) {
+                drawQuad(f, r.quad);
+                cv::putText(f, r.text, { 10, 30 }, cv::FONT_HERSHEY_SIMPLEX, 0.7, { 0, 255, 0 }, 2);
+                std::cout << "QR detected: " << r.text << "\n";
+            }
+            cv::imshow("QR Scanner", f);
+            if (cv::waitKey(1) == 'q') break;
+        }
     }
     else {
-        std::cout << "Usage:\n"
-            << "  " << argv[0] << "        # camera mode\n"
-            << "  " << argv[0] << " <file> # photo mode\n";
+        cv::Mat img = cv::imread(argv[1]);
+        if (img.empty()) {
+            std::cerr << "Can't open image: " << argv[1] << "\n";
+            return 1;
+        }
+
+        std::cout << "Processing: " << argv[1] << "\n";
+        auto r = scanner.detectAndDecode(img);
+        if (r.ok) {
+            drawQuad(img, r.quad);
+            cv::putText(img, r.text, { 10, 50 }, cv::FONT_HERSHEY_SIMPLEX, 1.2, { 0, 255, 0 }, 3);
+            std::cout << "QR detected: " << r.text << "\n";
+        }
+        else {
+            std::cout << "QR not detected\n";
+        }
+        cv::imshow("Result", img);
+        cv::waitKey(0);
     }
     return 0;
 }
